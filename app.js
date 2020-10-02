@@ -3,31 +3,58 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
 const mongoose = require("mongoose");
+const firebase = require("firebase/app");
+require('dotenv').config({path: __dirname + '/.env'});
+// Import dotenv before firebase_auth due to dependecies on env
+const firebase_auth = require("../node_api/auth/auth");
+
+// Add the Firebase products that you want to use
+const firebase_admin = require('firebase-admin');
+require("firebase/auth");
+// require("firebase/firestore");
+
+const ENV_VAR = process.env;
+
+const firebaseConfig = {
+  apiKey: ENV_VAR.FIREBASE_API_KEY,
+  authDomain: ENV_VAR.FIREBASE_AUTH_DOMAIN,
+  databaseURL: ENV_VAR.FIREBASE_DB_URL,
+  projectId: ENV_VAR.FIREBASE_PROJECT_ID,
+  storageBucket: ENV_VAR.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: ENV_VAR.FIREBASE_MSG_SENDER_ID,
+  appId: ENV_VAR.FIREBASE_APP_ID
+};
+
+firebase.initializeApp(firebaseConfig);
+
 
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-const url = "mongodb://127.0.0.1:27017/testdb";
-// const connection = mongoose.createConnection("mongodb://127.0.0.1:27017/testdb");
-// const UserSchema = new mongoose.Schema({
-//     username: String,
-//     hash: String,
-//     salt: String
-// });
-// const user_schema = mongoose.model('User', UserSchema);
+const url = ENV_VAR.MONGO_URL;
 
-// const user_01 = new user_schema({username:"john"});
-
-// mongoose.connect(url, { useNewUrlParser: true }).then(console.log(`MongoDB connected ${url}`)).catch(err => console.log(err));
-
-app.listen(3000, () => {
- console.log("Node server running on port 3000");
+app.listen(ENV_VAR.NODE_PORT, () => {
+ console.log(`Node server running on port ${ENV_VAR.NODE_PORT}`);
 });
 
 const MongoClient = require('mongodb').MongoClient;
 
-app.get("/mongo", (req, res, next) => {
+app.post("/sign_in", (req, res) => {
+  firebase.auth().signInWithEmailAndPassword(req.body.email, req.body.password)
+   .then(function(firebaseUser) {
+       console.log(firebaseUser);
+       res.status(200).send(firebaseUser);
+   })
+  .catch(function(error) {
+       // Error Handling
+       console.log('error in authenticating user');
+      console.log(error)
+      res.status(401).send(error);
+  });
+})
+
+app.get("/mongo", firebase_auth.validateFirebaseToken,(req, res) => {
     MongoClient.connect(url, function(err, db) {
         if (err) throw err;
         var dbo = db.db("testdb");
@@ -119,3 +146,4 @@ app.post('/insert_schedule', (req, res) => {
   });
 
 })
+
