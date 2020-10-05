@@ -42,13 +42,30 @@ const MongoClient = require('mongodb').MongoClient;
 
 app.post("/sign_in", (req, res) => {
   firebase.auth().signInWithEmailAndPassword(req.body.email, req.body.password)
-   .then(function(firebaseUser) {
-       console.log(firebaseUser);
-       res.status(200).send(firebaseUser);
+   .then(function(result) {  
+       if(result.user.emailVerified) {
+        res.status(200).send(result);
+       } else {
+         res.status(401).send('Unverified account')
+       }
    })
   .catch(function(error) {
        // Error Handling
        console.log('error in authenticating user');
+      console.log(error)
+      res.status(401).send(error);
+  });
+})
+
+app.post("/sign_up", (req, res) => {
+  firebase.auth().createUserWithEmailAndPassword(req.body.email, req.body.password)
+   .then(function(result) {
+       result.user.sendEmailVerification();
+       res.status(200).send(result.user);
+   })
+  .catch(function(error) {
+       // Error Handling
+       console.log('error in creating user');
       console.log(error)
       res.status(401).send(error);
   });
